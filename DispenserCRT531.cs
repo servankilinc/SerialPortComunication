@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Enums;
+using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
@@ -67,7 +68,7 @@ namespace ConsoleApp1
             }
         }
 
-        public StatusData<byte[]> SendCommand(CommandByPosittion command, Position position)
+        public StatusData<byte[]> SendCommand(CommandMoveCardToPosittion command, Position position)
         {
             try
             {
@@ -75,7 +76,7 @@ namespace ConsoleApp1
 
                 switch (command)
                 {
-                    case CommandByPosittion.DispenseFC:
+                    case CommandMoveCardToPosittion.DispenseFC:
                         HandleSendCommand(DispenserCommands.DispenseFC(position));
                         break;
                     default:
@@ -98,7 +99,7 @@ namespace ConsoleApp1
             }
         }
 
-        public StatusData<byte[]> SendCommand(CommandByDoorStatus command, DoorStatus doorStatus)
+        public StatusData<byte[]> SendCommand(CommandSetDoorStatus command, DoorStatus doorStatus)
         {
             try
             {
@@ -106,7 +107,7 @@ namespace ConsoleApp1
 
                 switch (command)
                 {
-                    case CommandByDoorStatus.DoorSetIN:
+                    case CommandSetDoorStatus.DoorSetIN:
                         HandleSendCommand(DispenserCommands.DoorSetIN(doorStatus));
                         break;
                     default:
@@ -129,7 +130,7 @@ namespace ConsoleApp1
             }
         }
 
-        public StatusData<List<(DispenserStatus status, string message)>> SendCommand(CommandByStatus command)
+        public StatusData<List<(DispenserStatus status, string message)>> SendCommand(CommandSearchStatus command)
         {
             try
             {
@@ -137,7 +138,7 @@ namespace ConsoleApp1
 
                 switch (command)
                 {
-                    case CommandByStatus.StatusRF:
+                    case CommandSearchStatus.StatusRF:
                         var response_statusRF = HandleSendCommand(DispenserCommands.StatusRF());
 
                         if (response_statusRF != null && response_statusRF.Length == 6)
@@ -179,7 +180,7 @@ namespace ConsoleApp1
                                 Message = $"Dispenser StatusRF komutundan beklenen uzunlukta cevap alınamadı. cevap: {resp_statusRF}"
                             };
                         }
-                    case CommandByStatus.StatusAP:
+                    case CommandSearchStatus.StatusAP:
                         var response_statusAP = HandleSendCommand(DispenserCommands.StatusAP());
 
                         if (response_statusAP != null && response_statusAP.Length == 6)
@@ -227,25 +228,64 @@ namespace ConsoleApp1
                                 Message = $"Dispenser StatusAP komutundan beklenen uzunlukta cevap alınamadı. cevap: {resp_statusAP}"
                             };
                         }
-                    case CommandByStatus.DoorStatusSI:
+                    default:
+                        throw new Exception("Dispenser'a tanımsız bir komut gönderildi.");
+                }
+            }
+            catch (Exception ex)
+            {
+                var exceptionMessage = ex.InnerException != null ? $"exception: {ex.Message} innerExceptionex: {ex.InnerException.Message}" : $"exception: {ex.Message}";
+                return new StatusData<List<(DispenserStatus status, string message)>>
+                {
+                    Status = Enums.StatusEnum.Error,
+                    Message = $"Dispenser komut gönderimi sırasında bir sorun oluştu, komut: {command}, detay: {exceptionMessage}"
+                };
+            }
+        }
+
+        public StatusData<DoorStatus> SendCommand(CommandSearchDoorStatus command)
+        {
+            try
+            {
+                PreparePort();
+
+                switch (command)
+                { 
+                    case CommandSearchDoorStatus.DoorStatusSI:
                         var response_doorStatusSI = HandleSendCommand(DispenserCommands.DoorStatusSI());
 
                         if (response_doorStatusSI != null && response_doorStatusSI.Length == 3)
                         {
-                            var statusList = new List<(DispenserStatus, string)>();
-
-                            // TODO: kapı durumu ile ilgili status bilgileri eklenecek
-
-                            return new StatusData<List<(DispenserStatus status, string message)>>
+                            DoorStatus? doorStatus;
+                            switch(response_doorStatusSI[2])
+                            {
+                                case 48:
+                                    doorStatus = DoorStatus.Prohibit;
+                                    break;
+                                case 49:
+                                    doorStatus = DoorStatus.IntoErrorCard;
+                                    break;
+                                case 50:
+                                    doorStatus = DoorStatus.ReadWritePosition;
+                                    break;
+                                default:
+                                    return new StatusData<DoorStatus>
+                                    {
+                                        Status = Enums.StatusEnum.EmptyData,
+                                        Message = $"Dispenser DoorStatusSI komutundan beklenmeyen kapı durumu değeri alındı. cevap: {response_doorStatusSI[2]}"
+                                    };
+                            }
+                            
+                            return new StatusData<DoorStatus>
                             {
                                 Status = Enums.StatusEnum.Successful,
-                                Entity = statusList
+                                Entity = doorStatus.Value
                             };
                         }
                         else
                         {
                             string resp_doorStatusSI = response_doorStatusSI != null ? Encoding.ASCII.GetString(response_doorStatusSI) : string.Empty;
-                            return new StatusData<List<(DispenserStatus status, string message)>>
+                            return new StatusData<DoorStatus>
                             {
                                 Status = Enums.StatusEnum.EmptyData,
                                 Message = $"Dispenser DoorStatusSI komutundan beklenen uzunlukta cevap alınamadı. cevap: {resp_doorStatusSI}"
@@ -258,7 +298,7 @@ namespace ConsoleApp1
             catch (Exception ex)
             {
                 var exceptionMessage = ex.InnerException != null ? $"exception: {ex.Message} innerExceptionex: {ex.InnerException.Message}" : $"exception: {ex.Message}";
-                return new StatusData<List<(DispenserStatus status, string message)>>
+                return new StatusData<DoorStatus>
                 {
                     Status = Enums.StatusEnum.Error,
                     Message = $"Dispenser komut gönderimi sırasında bir sorun oluştu, komut: {command}, detay: {exceptionMessage}"

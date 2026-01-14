@@ -21,7 +21,7 @@ namespace ConsoleApp1
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var status = _dispenser.SendCommand(DispenserEnums.CommandByStatus.StatusAP);
+                var status = _dispenser.SendCommand(DispenserEnums.CommandSearchStatus.StatusAP);
                 if (status.Status == Enums.StatusEnum.Successful)
                 {
                     _lastCommunicationTime = DateTime.Now;

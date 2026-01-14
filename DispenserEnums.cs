@@ -2,23 +2,31 @@
 {
     public class DispenserEnums
     {
+        // Gelen Komutlar
         public enum Command
         {
             DispenseDC = 1,
             CaptureCP,
             ResetRS
         }
-        public enum CommandByStatus
+        // Dispenser Durum Sorgulama Komutları
+        public enum CommandSearchStatus
         {
             StatusRF,
-            StatusAP,
+            StatusAP
+        }
+        // Kapı Durumu Sorgulama Komutları
+        public enum CommandSearchDoorStatus
+        {
             DoorStatusSI,
         }
-        public enum CommandByPosittion
+        // Kart Hareket Ettirme Pozisyon Komutları
+        public enum CommandMoveCardToPosittion
         {
             DispenseFC = 1
         }
-        public enum CommandByDoorStatus
+        // Kartın Dışardan Alındığında Ne Yapılacağı Komutları
+        public enum CommandSetDoorStatus
         {
             DoorSetIN = 1
         }
